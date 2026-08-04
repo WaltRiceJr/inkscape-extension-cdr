@@ -50,12 +50,24 @@ environment before starting Inkscape, or convert manually:
     cdr2svg --pages file.cdr          # print page count
     cdr2svg --page 2 file.cdr > page2.svg
 
+## Vendored source provenance
+
+The vendored sources were last synced from these commits of the sibling
+checkouts:
+
+- `libcdr` @ `71d8270` — "Derive multi-line text pitch from Corel spacing
+  and frame height." (6 local commits on top of upstream 0.1.8)
+- `librevenge` @ `cc7b519d` — "Improve SVG text layout for multi-line CDR
+  import." (1 local commit on top of upstream)
+
 ## Updating the vendored sources
 
 After changing the sibling checkouts (`../libcdr`,
 `../libwpd-librevenge`), run:
 
     ./update-vendor.sh && make && ./install.sh
+
+and update the commit hashes listed above.
 
 ## Licensing
 
