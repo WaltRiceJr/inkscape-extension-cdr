@@ -25,8 +25,18 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            g++ make pkg-config zip \
-            zlib1g-dev liblcms2-dev libicu-dev libboost-dev
+            g++ make pkg-config zip curl ca-certificates \
+            zlib1g-dev libicu-dev libboost-dev
+
+      # Ubuntu ships static libs for ICU and zlib but not for lcms2,
+      # so build that one from source.
+      - name: Build static lcms2
+        run: |
+          curl -fsSL https://github.com/mm2/Little-CMS/releases/download/lcms2.16/lcms2-2.16.tar.gz | tar xz
+          cd lcms2-2.16
+          ./configure --enable-static --disable-shared --without-jpeg --without-tiff
+          make -j"$(nproc)"
+          sudo make install
 
       - name: Build (static deps)
         run: |
