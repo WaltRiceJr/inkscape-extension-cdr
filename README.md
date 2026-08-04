@@ -31,15 +31,29 @@ time, not linked).
     ./install.sh    # builds if needed, installs into
                     # ~/.config/inkscape/extensions/
 
+### Prebuilt releases
+
+Tagged releases (`v*`) are built automatically for Linux (x86_64, arm64),
+Windows (x86_64), and macOS (arm64, x86_64) by the GitHub Actions workflow
+in `.github/workflows/release.yml`. Each zip contains the extension files
+plus a self-contained `bin/cdr2svg` (static ICU/lcms2/zlib on Linux,
+bundled DLLs on Windows, bundled dylibs on macOS); unpack its contents
+into the Inkscape user extensions directory (see the included
+`INSTALL.txt`). To cut a release:
+
+    git tag v0.1.0 && git push origin v0.1.0
+
 ## Using
 
-Restart Inkscape after installing. In **File → Open**, choose the
-**CorelDRAW (bundled cdr2svg) (*.cdr)** file type and open your file.
+Restart Inkscape after installing. `.cdr` and `.cmx` files then open
+directly via **File → Open**, drag-and-drop, or the command line.
 
-Note: if your Inkscape build has built-in CDR support (it links system
-libcdr), that importer takes precedence when the file type is left on
-"automatic". Select the *bundled cdr2svg* entry in the open dialog's
-file-type list to use this extension instead.
+The `.inx` files declare `priority="1"` on their `<input>` elements, which
+makes Inkscape's autodetection prefer this extension over the built-in
+libcdr importer (extensions with a non-zero priority sort ahead of the
+zero-priority built-ins). Remove the attribute to restore the built-in
+importer. Note the built-in still handles `.cdt` and `.ccx` files, which
+this extension does not register.
 
 ### Multi-page documents
 

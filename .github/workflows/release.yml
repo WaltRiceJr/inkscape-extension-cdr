@@ -1,0 +1,148 @@
+name: Release build
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            arch: x86_64
+          - runner: ubuntu-22.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            g++ make pkg-config zip \
+            zlib1g-dev liblcms2-dev libicu-dev libboost-dev
+
+      - name: Build (static deps)
+        run: |
+          make -j"$(nproc)" LIBS='-static-libgcc -static-libstdc++ -Wl,-Bstatic -llcms2 -licui18n -licuuc -licudata -lz -Wl,-Bdynamic -ldl -lpthread -lm'
+          # The portable binary must not depend on shared ICU/lcms2/zlib.
+          if ldd cdr2svg | grep -E 'icu|lcms|libz\.|libstdc\+\+'; then
+            echo "unexpected shared dependency" >&2; exit 1
+          fi
+          ./cdr2svg 2>&1 | head -2 || true
+
+      - name: Package
+        run: |
+          mkdir -p dist/inkscape-cdr-extension/bin
+          cp cdr_input.inx cmx_input.inx cdr_input.py packaging/INSTALL.txt dist/inkscape-cdr-extension/
+          cp cdr2svg dist/inkscape-cdr-extension/bin/
+          cd dist && zip -r "../inkscape-cdr-extension-linux-${{ matrix.arch }}.zip" inkscape-cdr-extension
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.arch }}
+          path: '*.zip'
+
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: 'msys2 {0}'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: >-
+            make
+            zip
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-pkgconf
+            mingw-w64-x86_64-zlib
+            mingw-w64-x86_64-lcms2
+            mingw-w64-x86_64-icu
+            mingw-w64-x86_64-boost
+
+      - name: Build
+        run: |
+          make -j"$(nproc)"
+          [ -f cdr2svg.exe ] || mv cdr2svg cdr2svg.exe
+          ./cdr2svg.exe 2>&1 | head -2 || true
+
+      - name: Package (bundle MinGW DLLs)
+        run: |
+          mkdir -p dist/inkscape-cdr-extension/bin
+          cp cdr_input.inx cmx_input.inx cdr_input.py packaging/INSTALL.txt dist/inkscape-cdr-extension/
+          cp cdr2svg.exe dist/inkscape-cdr-extension/bin/
+          ldd cdr2svg.exe | awk '/mingw64/ {print $3}' | while read -r dll; do
+            cp "$dll" dist/inkscape-cdr-extension/bin/
+          done
+          ls dist/inkscape-cdr-extension/bin/
+          cd dist && zip -r ../inkscape-cdr-extension-windows-x86_64.zip inkscape-cdr-extension
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x86_64
+          path: '*.zip'
+
+  macos:
+    strategy:
+      matrix:
+        include:
+          - runner: macos-latest
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: brew install pkgconf lcms2 icu4c boost zlib dylibbundler
+
+      - name: Build
+        run: |
+          export PKG_CONFIG_PATH="$(brew --prefix icu4c)/lib/pkgconfig:$(brew --prefix zlib)/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+          export CPLUS_INCLUDE_PATH="$(brew --prefix)/include"
+          make -j"$(sysctl -n hw.ncpu)"
+          ./cdr2svg 2>&1 | head -2 || true
+
+      - name: Package (bundle dylibs)
+        run: |
+          mkdir -p dist/inkscape-cdr-extension/bin
+          cp cdr_input.inx cmx_input.inx cdr_input.py packaging/INSTALL.txt dist/inkscape-cdr-extension/
+          cp cdr2svg dist/inkscape-cdr-extension/bin/
+          dylibbundler -od -b \
+            -x dist/inkscape-cdr-extension/bin/cdr2svg \
+            -d dist/inkscape-cdr-extension/bin/libs \
+            -p '@executable_path/libs'
+          codesign --force -s - dist/inkscape-cdr-extension/bin/cdr2svg dist/inkscape-cdr-extension/bin/libs/*
+          cd dist && zip -ry "../inkscape-cdr-extension-macos-${{ matrix.arch }}.zip" inkscape-cdr-extension
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}
+          path: '*.zip'
+
+  release:
+    if: github.ref_type == 'tag'
+    needs: [linux, windows, macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: '*.zip'
+          generate_release_notes: true

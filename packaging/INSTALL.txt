@@ -1,0 +1,26 @@
+Inkscape CorelDRAW (CDR/CMX) import extension - bundled cdr2svg
+================================================================
+
+1. Find your Inkscape user extensions directory:
+   Edit > Preferences > System > "User extensions".
+   Typical locations:
+     Linux:   ~/.config/inkscape/extensions
+     Windows: %APPDATA%\inkscape\extensions
+     macOS:   ~/Library/Application Support/org.inkscape.Inkscape/config/inkscape/extensions
+
+2. Copy the CONTENTS of this folder (cdr_input.inx, cmx_input.inx,
+   cdr_input.py and the bin/ folder) into that directory.
+
+3. Restart Inkscape. .cdr and .cmx files now open via File > Open,
+   drag-and-drop, or Import. This extension takes priority over
+   Inkscape's built-in CDR importer.
+
+macOS note: the bundled binaries are not notarized. If macOS refuses to
+run them, clear the quarantine flag on the extensions directory:
+    xattr -dr com.apple.quarantine "<extensions dir>"
+
+Multi-page documents: page 1 is imported by default and a notice lists
+the total page count. Set INKSCAPE_CDR_PAGE=N in the environment before
+starting Inkscape to import another page, or convert manually:
+    bin/cdr2svg --pages file.cdr           # print page count
+    bin/cdr2svg --page 2 file.cdr > p2.svg
