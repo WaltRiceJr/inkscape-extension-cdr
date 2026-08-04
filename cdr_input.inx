@@ -2,7 +2,7 @@
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
   <name>CorelDRAW Input (bundled cdr2svg)</name>
   <id>org.inkscape.input.cdr2svg.cdr</id>
-  <input>
+  <input priority="1">
     <extension>.cdr</extension>
     <mimetype>application/vnd.corel-draw</mimetype>
     <filetypename>CorelDRAW (bundled cdr2svg) (*.cdr)</filetypename>

@@ -2,7 +2,7 @@
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
   <name>Corel Presentation Exchange Input (bundled cdr2svg)</name>
   <id>org.inkscape.input.cdr2svg.cmx</id>
-  <input>
+  <input priority="1">
     <extension>.cmx</extension>
     <mimetype>image/x-cmx</mimetype>
     <filetypename>Corel Presentation Exchange (bundled cdr2svg) (*.cmx)</filetypename>
