@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
+  <name>CorelDRAW Input (bundled cdr2svg)</name>
+  <id>org.inkscape.input.cdr2svg.cdr</id>
+  <input>
+    <extension>.cdr</extension>
+    <mimetype>application/vnd.corel-draw</mimetype>
+    <filetypename>CorelDRAW (bundled cdr2svg) (*.cdr)</filetypename>
+    <filetypetooltip>Import CorelDRAW files using the bundled patched libcdr converter</filetypetooltip>
+  </input>
+  <script>
+    <command location="inx" interpreter="python">cdr_input.py</command>
+  </script>
+</inkscape-extension>
