@@ -4,9 +4,14 @@
 Runs the bundled cdr2svg converter (built from patched libcdr/librevenge
 sources) and writes the resulting SVG to stdout, which Inkscape reads.
 
-Page selection: page 1 is imported by default. For multi-page documents,
-set the environment variable INKSCAPE_CDR_PAGE (1-based) before starting
-Inkscape, or run cdr2svg manually with --page N.
+Every page of the document is imported. Multi-page documents come in as an
+Inkscape multi-page drawing (one <inkscape:page> per CorelDRAW page, laid
+out left to right), which needs Inkscape 1.2 or later; older versions show
+page 1 and keep the rest of the content on the canvas beside it.
+
+To import a single page instead, set the environment variable
+INKSCAPE_CDR_PAGE (1-based) before starting Inkscape, or run cdr2svg
+manually with --page N.
 """
 
 import os
@@ -41,11 +46,12 @@ def main():
     infile = sys.argv[-1]
     converter = find_converter()
 
-    page = os.environ.get("INKSCAPE_CDR_PAGE", "1")
+    page = os.environ.get("INKSCAPE_CDR_PAGE")
+    args = [converter, "--page", page] if page else [converter, "--all"]
 
     try:
         result = subprocess.run(
-            [converter, "--page", page, infile],
+            args + [infile],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
@@ -57,22 +63,8 @@ def main():
         sys.stderr.write(result.stderr.decode("utf-8", "replace"))
         sys.exit(result.returncode)
 
-    # Warn (non-fatally) when the document has more pages than we imported.
-    try:
-        pages = subprocess.run(
-            [converter, "--pages", infile],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-        )
-        count = int(pages.stdout.strip() or 1)
-        if count > 1:
-            sys.stderr.write(
-                "Note: document has %d pages; imported page %s. Set "
-                "INKSCAPE_CDR_PAGE to import a different page.\n" % (count, page)
-            )
-    except (ValueError, OSError):
-        pass
-
+    # Anything on stderr makes Inkscape raise a "Script Error" dialog over the
+    # imported drawing, so stay quiet unless the conversion actually failed.
     sys.stdout.buffer.write(result.stdout)
 
 

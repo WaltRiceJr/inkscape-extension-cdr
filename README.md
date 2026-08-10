@@ -57,11 +57,39 @@ this extension does not register.
 
 ### Multi-page documents
 
-Page 1 is imported by default and a notice is shown if the document has
-more pages. To import another page, set `INKSCAPE_CDR_PAGE=N` in the
+Every page is imported. libcdr renders each CorelDRAW page separately, and
+`cdr2svg` stitches the results into one SVG with the pages laid out left to
+right, separated by a 20 pt gap, each described by an `<inkscape:page>`
+element in `<sodipodi:namedview>`. Inkscape 1.2 and later read those as real
+pages — visible in the Pages tool, and exported as a multi-page PDF.
+
+The SVG's `width`/`height`/`viewBox` describe *page 1* rather than the whole
+row of pages, because Inkscape ties the first page to the viewport and
+rewrites the first `<inkscape:page>` to match it on load. This is how
+Inkscape stores its own multi-page documents. The consequence is that plain
+SVG viewers (browsers, older Inkscape) show only page 1; the other pages sit
+on the canvas to its right, off the viewport but fully editable in Inkscape.
+
+Merging puts every page in one id namespace. librevenge already numbers
+gradient, pattern and marker ids across the whole document, but layer ids
+come from the file and can repeat, so `cdr2svg` renames any id it has
+already seen (appending `-<page number>`) and rewrites the `url(#…)` and
+`href="#…"` references to it within that page.
+
+CorelDRAW keeps a desktop area around the pages, and objects parked there
+(reference screenshots, scraps) still belong to a page's stream while
+sitting outside its page box. Lining pages up side by side would drop that
+content on top of a neighbouring page, so each page is clipped to its own
+box — which is what CorelDRAW's own printing and PDF export do. Pass
+`--no-clip` to keep the strays, accepting that they may overlap the next
+page; in Inkscape, **Object → Clip → Release** does the same per page.
+
+To import a single page instead, set `INKSCAPE_CDR_PAGE=N` in the
 environment before starting Inkscape, or convert manually:
 
     cdr2svg --pages file.cdr          # print page count
+    cdr2svg file.cdr > all.svg        # every page (default)
+    cdr2svg --no-clip file.cdr > all.svg
     cdr2svg --page 2 file.cdr > page2.svg
 
 ## Vendored source provenance
